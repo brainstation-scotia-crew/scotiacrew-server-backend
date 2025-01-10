@@ -5,6 +5,8 @@ import { tokenToSocket } from "../server.js";
 
 let customersQueue = [];
 let advisorsQueue = [];
+let customerAdvisorMap = new Map();
+export  {customerAdvisorMap};
 
 // /sessions/[whatever]
 router.get("/request-token",(_req,res)=>{
@@ -12,14 +14,20 @@ router.get("/request-token",(_req,res)=>{
 	res.status(200).json({"token": token});
 });
 
-router.get("/getCustomer", (_req, res)=>{
-    if(customersQueue[0] !== undefined){
-        
-        token = customersQueue.shift();
-        res.status(200).json({token: `${token}`});
-    }
-    else{
-        res.status(404).json({error: "No customers in queue"})
+router.get("/getCustomer", (_req, res) => {
+    if (customersQueue.length > 0) {
+        const customerToken = customersQueue.shift();
+        const advisorToken = advisorsQueue.shift();
+
+        if (advisorToken) {
+            customerAdvisorMap.set(customerToken, advisorToken);
+            customerAdvisorMap.set(advisorToken, customerToken); 
+            res.status(200).json({ token: `${customerToken}` });
+        } else {
+            res.status(404).json({ error: "No advisors available" });
+        }
+    } else {
+        res.status(404).json({ error: "No customers in queue" });
     }
 });
 
@@ -48,20 +56,29 @@ router.put("/queue-up", (req, res) => {
     }
 });
 
+// {
+// 	"from": "824167b9-e27b-42df-a190-c1798949e414",
+// 	"message": "test"
+// }
+router.post("/send-message", (req, res) => {
+    const { from, message } = req.body;
 
-router.post("/inbox", (req, res) => {
-    const {to, from, message} = req.body;
+    if (!from || !message) {
+        return res.status(400).json({ error: "Missing 'from' or 'message' fields" });
+    }
 
-    if (!to || !from || !message) {
-        return res.status(400).json({error: "Missing 'to', 'from', or 'message' fields"});
+    const to = customerAdvisorMap.get(from);
+    if (!to) {
+        return res.status(404).json({ error: "No connection found for the sender" });
     }
 
     const recipientSocket = tokenToSocket.get(to);
     if (recipientSocket) {
-        recipientSocket.emit("inbox-message", {from, message});
-        res.status(200).json({success: true, message: "Message sent successfully"});
+        recipientSocket.emit("inbox-message", { from, message });
+        res.status(200).json({ success: true, message: "Message sent successfully" });
     } else {
-        res.status(404).json({error: "Recipient not found"});
+        res.status(404).json({ error: "Recipient not connected" });
     }
 });
+
 export default router;
