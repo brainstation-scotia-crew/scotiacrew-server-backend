@@ -14,6 +14,14 @@ router.get("/request-token",(_req,res)=>{
 	res.status(200).json({"token": token});
 });
 
+
+router.get("/debug", (_req, res) => {
+    res.json({
+        map: Array.from(customerAdvisorMap.entries()),
+        customersQueue: Array.from(customersQueue),     
+        advisorsQueue: Array.from(advisorsQueue)        
+    });
+});
 router.get("/getCustomer", (_req, res) => {
     if (customersQueue.length > 0) {
         const customerToken = customersQueue.shift();
