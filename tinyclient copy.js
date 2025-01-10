@@ -2,7 +2,7 @@ import { io } from 'socket.io-client';
 
 const socket = io('http://localhost:8080'); 
 
-const token = '9a5d2c2a-99e0-4648-96b6-17eac28d0edd';
+const token = 'd4c54793-c059-48d9-9fc7-5c3c5a529eec';
 
 socket.on('connect', () => {
     console.log(`Client connected with socket ID: ${socket.id}`);

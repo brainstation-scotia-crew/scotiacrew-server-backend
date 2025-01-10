@@ -28,8 +28,9 @@ router.get("/getCustomer", (_req, res) => {
         const advisorToken = advisorsQueue.shift();
 
         if (advisorToken) {
-            customerAdvisorMap.set(customerToken, advisorToken);
-            customerAdvisorMap.set(advisorToken, customerToken); 
+            // Storing both customer and advisor tokens with roles
+            customerAdvisorMap.set(customerToken, { token: advisorToken, role: 'advisor' });
+            customerAdvisorMap.set(advisorToken, { token: customerToken, role: 'customer' });
             res.status(200).json({ token: `${customerToken}` });
         } else {
             res.status(404).json({ error: "No advisors available" });
@@ -38,7 +39,6 @@ router.get("/getCustomer", (_req, res) => {
         res.status(404).json({ error: "No customers in queue" });
     }
 });
-
 router.put("/queue-up", (req, res) => {
     const { token } = req.body;
     const { userType} = req.body;
@@ -75,18 +75,20 @@ router.post("/send-message", (req, res) => {
         return res.status(400).json({ error: "Missing 'from' or 'message' fields" });
     }
 
-    const to = customerAdvisorMap.get(from);
-    if (!to) {
+    const { token: toToken, role } = customerAdvisorMap.get(from) || {};
+
+    if (!toToken) {
         return res.status(404).json({ error: "No connection found for the sender" });
     }
 
-    const recipientSocket = tokenToSocket.get(to);
+    // Use the token and role to find the recipient's socket
+    const recipientSocket = tokenToSocket.get(toToken);
+
     if (recipientSocket) {
-        recipientSocket.emit("inbox-message", { from, message });
+        recipientSocket.emit("inbox-message", { from, message, role });
         res.status(200).json({ success: true, message: "Message sent successfully" });
     } else {
         res.status(404).json({ error: "Recipient not connected" });
     }
 });
-
 export default router;

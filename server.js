@@ -43,42 +43,42 @@ const tokenToSocket = new Map();
 io.on("connection", (socket) => {
     console.log(`Client connected: ${socket.id}`);
 
-	socket.on("register", (token) => {
-		tokenToSocket.set(token, socket);
-		console.log(`Token ${token} -> Socket ${socket.id}`);
-	  });
+    socket.on("register", (token) => {
+        tokenToSocket.set(token, socket);
+        console.log(`Token ${token} -> Socket ${socket.id}`);
+    });
 
-	  socket.on("disconnect", () => {
-		let disconnectedToken = null;
-	  
-		for (const [key, value] of tokenToSocket.entries()) {
-		  if (value === socket) {
-			tokenToSocket.delete(key);
-			disconnectedToken = key;
-			console.log(`Deleted token ${key} for socket ${socket.id}`);
-			break;
-		  }
-		}
-	  
-		if (disconnectedToken) {
-		  const counterpartToken = customerAdvisorMap.get(disconnectedToken);
-	  
-		  if (counterpartToken) {
-			customerAdvisorMap.delete(disconnectedToken);
-			customerAdvisorMap.delete(counterpartToken);
-	  
-			const counterpartSocket = tokenToSocket.get(counterpartToken);
-			if (counterpartSocket) {
-			  counterpartSocket.emit("counterpart-disconnected", {
-				message: "Your counterpart has disconnected.",
-			  });
-			}
-	  
-			console.log(`Cleaned up mapping for ${disconnectedToken} and ${counterpartToken}`);
-		  }
-		}
-	  });
-	});
+    socket.on("disconnect", () => {
+        let disconnectedToken = null;
+      
+        for (const [key, value] of tokenToSocket.entries()) {
+            if (value === socket) {
+                tokenToSocket.delete(key);
+                disconnectedToken = key;
+                console.log(`Deleted token ${key} for socket ${socket.id}`);
+                break;
+            }
+        }
+
+        if (disconnectedToken) {
+            const counterpartToken = customerAdvisorMap.get(disconnectedToken);
+
+            if (counterpartToken) {
+                customerAdvisorMap.delete(disconnectedToken);
+                customerAdvisorMap.delete(counterpartToken);
+
+                const counterpartSocket = tokenToSocket.get(counterpartToken);
+                if (counterpartSocket) {
+                    counterpartSocket.emit("counterpart-disconnected", {
+                        message: "Your counterpart has disconnected.",
+                    });
+                }
+
+                console.log(`Cleaned up mapping for ${disconnectedToken} and ${counterpartToken}`);
+            }
+        }
+    });
+});
 
 server.listen(PORT,() => {
 	console.log(`server running at ${process.env.BACKEND_URL}${PORT}`);
